@@ -25,15 +25,16 @@ func NewService(store *storage.Storage, loger *zap.SugaredLogger) *Service {
 }
 
 // CreateSong : Создание песни и вызов сервиса хранилища
-func (s Service) CreateSong(song models.Song, reqID string) (string, error) {
+func (s Service) CreateSong(song models.SongPostRequest, reqID string) (string, error) {
 	s.loger.Debugf("RequestID: %v. Creating song in service", reqID)
+	result := models.SongPostResponse{}
 
-	song.ID, err = s.store.CreateSong(song, reqID)
+	result.ID, err = s.store.CreateSong(song, reqID)
 
 	if err != nil {
 		s.loger.Errorf("Error creating song: %v", err)
 		return "", err
 	}
 
-	return song.ID, nil
+	return result.ID, nil
 }

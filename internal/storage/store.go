@@ -26,11 +26,12 @@ func NewStorage(db *pgxpool.Pool, loger *zap.SugaredLogger) *Storage {
 }
 
 // CreateSong : Создание песни в базе данных
-func (s Storage) CreateSong(song models.Song, reqID string) (string, error) {
+func (s Storage) CreateSong(song models.SongPostRequest, reqID string) (string, error) {
 	s.loger.Debugf("RequestID: %v. Creating song in the database", reqID)
+	result := models.SongPostResponse{}
 
 	err = s.db.QueryRow(context.Background(), "INSERT INTO public.songs (song_name, artist_name) VALUES ($1, $2) RETURNING id",
-		song.Name, song.Artist).Scan(&song.ID)
+		song.Name, song.Artist).Scan(&result.ID)
 
 	if err != nil {
 		s.loger.Errorf("Error creating song in the database: %v", err.Error())
@@ -38,5 +39,5 @@ func (s Storage) CreateSong(song models.Song, reqID string) (string, error) {
 	}
 
 	s.loger.Debugf("RequestID: %v. Song created in the database", reqID)
-	return song.ID, nil
+	return result.ID, nil
 }

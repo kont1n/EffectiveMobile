@@ -1,7 +1,6 @@
 package api
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/a-h/respond"
@@ -25,44 +24,22 @@ func (h *ApiHandler) InitRoutes() *chi.Mux {
 	router.Use(middleware.RequestID)
 	router.Use(h.LogAPI)
 
-	router.Get("/topic/{id}", func(w http.ResponseWriter, r *http.Request) {
-		resp := models.Topic{
-			Namespace: "example",
-			Topic:     "topic",
-			Private:   false,
-			ViewCount: 412,
-		}
-		respond.WithJSON(w, resp, http.StatusOK)
-	})
-
-	router.Get("/topics", func(w http.ResponseWriter, r *http.Request) {
-		resp := models.TopicsGetResponse{
-			Topics: []models.TopicRecord{
-				{
-					ID: "testId",
-					Topic: models.Topic{
-						Namespace: "example",
-						Topic:     "topic",
-						Private:   false,
-						ViewCount: 412,
-					},
-				},
-			},
-		}
-		respond.WithJSON(w, resp, http.StatusOK)
-	})
-
-	router.Post("/topics", func(w http.ResponseWriter, r *http.Request) {
-		resp := models.TopicsPostResponse{ID: "123"}
-		respond.WithJSON(w, resp, http.StatusOK)
-	})
+	router.Post("/api/song", h.postSong)
+	router.Get("/api/song/{id}", h.getSong)
+	router.Put("/api/song", h.updateSong)
+	router.Delete("/api/song/{id}", h.deleteSong)
+	router.Get("/api/songs", h.getSongsList)
+	router.Get("/api/song/{id}/verses", h.getSongVerses)
 
 	// Create the API definition.
 	api := rest.NewAPI("Music Store API")
 
 	// Create the routes and parameters of the Router in the REST API definition with an
 	// adapter, or do it manually.
-	chiadapter.Merge(api, router)
+	err = chiadapter.Merge(api, router)
+	if err != nil {
+		h.loger.Errorf("Failed to merge router to api: %v", err)
+	}
 
 	// It's possible to customise the OpenAPI schema for each type.
 	api.RegisterModel(rest.ModelOf[respond.Error](), rest.WithDescription("Standard JSON error"), func(s *openapi3.Schema) {
@@ -71,18 +48,37 @@ func (h *ApiHandler) InitRoutes() *chi.Mux {
 	})
 
 	// Document the routes.
-	api.Get("/topic/{id}").
-		HasResponseModel(http.StatusOK, rest.ModelOf[models.TopicsGetResponse]()).
-		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[respond.Error]())
+	api.Post("/api/song").
+		HasRequestModel(rest.ModelOf[models.SongPostRequest]()).
+		HasResponseModel(http.StatusCreated, rest.ModelOf[models.SongPostResponse]()).
+		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
+		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
 
-	api.Get("/topics").
-		HasResponseModel(http.StatusOK, rest.ModelOf[models.TopicsGetResponse]()).
-		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[respond.Error]())
+	api.Get("/api/song/{id}").
+		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongDetail]()).
+		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
+		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
 
-	api.Post("/topics").
-		HasRequestModel(rest.ModelOf[models.TopicsPostRequest]()).
-		HasResponseModel(http.StatusOK, rest.ModelOf[models.TopicsPostResponse]()).
-		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[respond.Error]())
+	api.Put("/api/song").
+		HasRequestModel(rest.ModelOf[models.SongDetail]()).
+		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongDetail]()).
+		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
+		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
+
+	api.Delete("/api/song/{id}").
+		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongDetail]()).
+		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
+		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
+
+	api.Get("/api/songs").
+		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongsGetResponse]()).
+		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
+		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
+
+	api.Get("/api/song/{id}/verses").
+		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongVerseResponse]()).
+		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
+		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
 
 	// Create the spec.
 	spec, err = api.Spec()
@@ -97,11 +93,9 @@ func (h *ApiHandler) InitRoutes() *chi.Mux {
 	var ui http.Handler
 	ui, err = swaggerui.New(spec)
 	if err != nil {
-		log.Fatalf("failed to create swagger UI handler: %v", err)
+		h.loger.Errorf("failed to create swagger UI handler: %v", err)
 	}
 	router.Handle("/swagger-ui*", ui)
-
-	router.Post("/api/song", h.postSong)
 
 	return router
 }
