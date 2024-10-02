@@ -1,0 +1,33 @@
+name: musicStore
+
+services:
+  application:
+    container_name: app
+    build: ./
+    ports:
+      - ${HOST_WEB_PORT}:${WEBSERVER_PORT}
+    depends_on:
+      - database
+    networks:
+      - local
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  database:
+    container_name: postgres
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - ${HOST_DB_PORT}:${POSTGRES_PORT}
+    networks:
+      - local
+    volumes:
+      - ./schema/postgres/000001_init.up.sql:/docker-entrypoint-initdb.d/000001_init.up.sql
+
+networks:
+  local:
+    driver: bridge
