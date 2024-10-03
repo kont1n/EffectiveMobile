@@ -221,6 +221,7 @@ func (h *ApiHandler) getSongsList(writer http.ResponseWriter, request *http.Requ
 // getSongVerses : Обработка запроса для получения куплета песни
 func (h *ApiHandler) getSongVerses(writer http.ResponseWriter, request *http.Request) {
 	var result models.SongVerseResponse
+	var coupletId string
 
 	// add pagination and couplet
 
@@ -229,7 +230,12 @@ func (h *ApiHandler) getSongVerses(writer http.ResponseWriter, request *http.Req
 	method := request.Method
 	h.loger.Debugf("RequestID: %v uri: %v method: %v", reqID, uri, method)
 
-	result, err = h.service.GetSongVerses(reqID)
+	coupletId = chi.URLParam(request, "сoupletId")
+	if coupletId == "" {
+		coupletId = defaultСouplet
+	}
+
+	result, err = h.service.GetSongVerses(coupletId, reqID)
 	if err != nil {
 		h.loger.Errorf("Error getting song verses: %v", err)
 		h.JSONError(writer, fmt.Sprintf("Error getting song verses: %v", err.Error()), http.StatusInternalServerError, reqID)

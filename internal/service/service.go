@@ -1,6 +1,9 @@
 package service
 
 import (
+	"strconv"
+	"strings"
+
 	"go.uber.org/zap"
 
 	"EffectiveMobile/internal/models"
@@ -106,15 +109,31 @@ func (s Service) GetSongsList(reqID string) (models.SongsListResponse, error) {
 }
 
 // GetSongVerses : Получение куплета песни и вызов сервиса хранилища
-func (s Service) GetSongVerses(reqID string) (models.SongVerseResponse, error) {
+func (s Service) GetSongVerses(coupletId string, reqID string) (models.SongVerseResponse, error) {
+	var couplet int
+	var couplets []string
 	s.loger.Debugf("RequestID: %v. Getting song verses in service", reqID)
 	result := models.SongVerseResponse{}
+
+	couplet, err = strconv.Atoi(coupletId)
+	if err != nil {
+		s.loger.Errorf("Error converting coupletId to int: %v", err)
+		return result, err
+	}
 
 	result, err = s.store.GetSongVerses(reqID)
 	if err != nil {
 		s.loger.Errorf("Error getting song verses: %v", err)
 		return result, err
 	}
+
+	couplets = strings.Split(result.Couplet, "\n\n")
+	if len(couplets) < couplet {
+		s.loger.Errorf("Error getting song verses: coupletId is out of range")
+		return result, err
+	}
+
+	result.Couplet = couplets[couplet-1]
 
 	return result, nil
 }

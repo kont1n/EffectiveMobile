@@ -7,4 +7,4 @@ run:
 	docker compose -f docker-compose.yml up
 
 test:
-	go test -v ./...
+	go test ./tests
