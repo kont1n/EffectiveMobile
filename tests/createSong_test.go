@@ -1,9 +1,7 @@
-package test
+package tests
 
 import (
-	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,17 +12,27 @@ import (
 
 func TestCreateSong(t *testing.T) {
 	t.Log("Create song")
-
+	// Проверяем создание тестовых данных
 	testSong := models.SongRequest{
 		Name:   "Supermassive Black Hole",
 		Artist: "Muse",
 	}
 
-	url := fmt.Sprintf("http://localhost:%s/api/song", os.Getenv("WEBSERVER_PORT"))
-	statusCode, _, err := CreateSong(t, testSong, url)
-
+	statusCode, song, err := CreateSong(t, testSong)
+	if err != nil {
+		t.Log("Error creating song: ", err)
+	}
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, statusCode)
+
+	// Удаляем тестовые данные
+	statusCode, err = DeleteSong(t, song)
+	if err != nil {
+		t.Log("Error deleting song: ", err)
+	}
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, statusCode)
+
 }
 
 func TestCreateSongWithEmptyName(t *testing.T) {
@@ -35,8 +43,10 @@ func TestCreateSongWithEmptyName(t *testing.T) {
 		Artist: "Muse",
 	}
 
-	url := fmt.Sprintf("http://localhost:%s/api/song", os.Getenv("WEBSERVER_PORT"))
-	statusCode, _, err := CreateSong(t, testSong, url)
+	statusCode, _, err := CreateSong(t, testSong)
+	if err != nil {
+		t.Log("Error creating song: ", err)
+	}
 
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, statusCode)

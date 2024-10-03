@@ -25,12 +25,13 @@ func (h *ApiHandler) InitRoutes() *chi.Mux {
 	router.Use(h.LogAPI)
 
 	router.Post("/api/song", h.createSong)
-	router.Get("/api/song/{id}", h.readSong)
 	router.Put("/api/song", h.updateSong)
 	router.Delete("/api/song/{id}", h.deleteSong)
-	router.Get("/api/songs/info", h.getSongInfo)
+	router.Get("/api/song/info", h.getSongInfo) // Так делать не надо
+	router.Get("/api/song/{id}", h.readSong)
+	router.Get("/api/song/{id}/couplet", h.getSongCouplet)
+
 	router.Get("/api/songs", h.getSongsList)
-	router.Get("/api/song/{id}/verses", h.getSongVerses)
 
 	// Create the API definition.
 	api := rest.NewAPI("Music Store API")
@@ -57,7 +58,6 @@ func (h *ApiHandler) InitRoutes() *chi.Mux {
 
 	api.Get("/api/song/{id}").
 		HasResponseModel(http.StatusOK, rest.ModelOf[models.Song]()).
-		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
 		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
 
 	api.Put("/api/song").
@@ -68,22 +68,20 @@ func (h *ApiHandler) InitRoutes() *chi.Mux {
 
 	api.Delete("/api/song/{id}").
 		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongResponse]()).
-		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
 		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
 
-	api.Get("/api/songs/info").
+	api.Get("/api/song/info").
 		HasRequestModel(rest.ModelOf[models.SongRequest]()).
 		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongInfoResponse]()).
 		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
 		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
 
-	api.Get("/api/songs").
-		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongsListResponse]()).
-		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
+	api.Get("/api/song/{id}/couplet").
+		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongVerseResponse]()).
 		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
 
-	api.Get("/api/song/{id}/verses").
-		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongVerseResponse]()).
+	api.Get("/api/songs").
+		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongsListResponse]()).
 		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
 		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
 

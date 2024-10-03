@@ -1,9 +1,7 @@
-package test
+package tests
 
 import (
-	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 
@@ -21,8 +19,7 @@ func TestGetSongCouplet(t *testing.T) {
 		Artist: "Evanescence",
 	}
 
-	url := fmt.Sprintf("http://localhost:%s/api/song", os.Getenv("WEBSERVER_PORT"))
-	statusCode, song, err := CreateSong(t, testSong, url)
+	statusCode, song, err := CreateSong(t, testSong)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, statusCode)
 
@@ -37,7 +34,7 @@ func TestGetSongCouplet(t *testing.T) {
 	}
 
 	var detailSong models.Song
-	statusCode, detailSong, err = UpdateSong(t, testUpdateSong, url)
+	statusCode, detailSong, err = UpdateSong(t, testUpdateSong)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusCode)
 	assert.Equal(t, testUpdateSong, detailSong)
@@ -45,17 +42,17 @@ func TestGetSongCouplet(t *testing.T) {
 	// Проверяем получение куплета
 	couplets := strings.Split(testUpdateSong.Text, "\\n\\n")
 	response := models.SongVerseResponse{}
-	statusCode, response, err = GetCouplet(t, song, "0", url)
+	statusCode, response, err = GetCouplet(t, song, "0")
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusCode)
 	assert.Equal(t, couplets[0], response.Couplet)
 
-	statusCode, response, err = GetCouplet(t, song, "1", url)
+	statusCode, response, err = GetCouplet(t, song, "1")
 	require.NoError(t, err)
 	assert.Equal(t, couplets[1], response.Couplet)
 
 	// Удаляем тестовые данные
-	statusCode, err = DeleteSong(t, song, url)
+	statusCode, err = DeleteSong(t, song)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusCode)
 }

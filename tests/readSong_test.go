@@ -1,9 +1,7 @@
-package test
+package tests
 
 import (
-	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,36 +14,33 @@ func TestReadSong(t *testing.T) {
 	t.Log("Read song")
 	// создаем тестовые данные
 	testSong := models.SongRequest{
-		Name:   "Everybody's Fool",
-		Artist: "Evanescence",
+		Name:   "Конь",
+		Artist: "ЛЮБЭ",
 	}
 
-	url := fmt.Sprintf("http://localhost:%s/api/song", os.Getenv("WEBSERVER_PORT"))
-	statusCode, song, err := CreateSong(t, testSong, url)
+	statusCode, song, err := CreateSong(t, testSong)
+	if err != nil {
+		t.Log("Error creating song: ", err)
+	}
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, statusCode)
 
 	// проверяем что полученные данные совпадают с тестовыми
 	var detailSong models.Song
-	statusCode, detailSong, err = GetSongByID(t, song, url)
+	statusCode, detailSong, err = GetSongByID(t, song)
+	if err != nil {
+		t.Log("Error getting song: ", err)
+	}
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusCode)
 	assert.Equal(t, testSong.Name, detailSong.Name)
 	assert.Equal(t, testSong.Artist, detailSong.Artist)
 
 	// удаляем тестовые данные
-	statusCode, err = DeleteSong(t, song, url)
+	statusCode, err = DeleteSong(t, song)
+	if err != nil {
+		t.Log("Error deleting song: ", err)
+	}
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusCode)
-}
-
-func TestReadSongWithEmptyID(t *testing.T) {
-	t.Log("Read song with empty ID")
-
-	getUrl := fmt.Sprintf("http://localhost:%s/api/song/%s", os.Getenv("WEBSERVER_PORT"), "")
-	getResponse, err := http.Get(getUrl)
-	defer getResponse.Body.Close()
-
-	require.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, getResponse.StatusCode)
 }

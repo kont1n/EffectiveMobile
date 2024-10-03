@@ -1,10 +1,9 @@
 package service
 
 import (
+	"go.uber.org/zap"
 	"strconv"
 	"strings"
-
-	"go.uber.org/zap"
 
 	"EffectiveMobile/internal/models"
 	"EffectiveMobile/internal/storage"
@@ -25,7 +24,7 @@ type SongService interface {
 	DeleteSong(guid string, reqID string) (models.SongResponse, error)
 	GetSongInfo(song models.SongRequest, reqID string) (models.SongInfoResponse, error)
 	GetSongsList(reqID string) (models.SongsListResponse, error)
-	GetSongVerses(coupletId string, reqID string) (models.SongVerseResponse, error)
+	GetSongCouplet(guid string, coupletId string, reqID string) (models.SongVerseResponse, error)
 }
 
 func NewService(store *storage.Storage, loger *zap.SugaredLogger) *Service {
@@ -119,32 +118,50 @@ func (s Service) GetSongsList(reqID string) (models.SongsListResponse, error) {
 	return result, nil
 }
 
-// GetSongVerses : Получение куплета песни и вызов сервиса хранилища
-func (s Service) GetSongVerses(coupletId string, reqID string) (models.SongVerseResponse, error) {
+// GetSongCouplet : Получение куплета песни и вызов сервиса хранилища
+func (s Service) GetSongCouplet(guid string, coupletId string, reqID string) (result models.SongVerseResponse, err error) {
+	var text string
 	var couplet int
 	var couplets []string
 	s.loger.Debugf("RequestID: %v. Getting song verses in service", reqID)
-	result := models.SongVerseResponse{}
 
-	couplet, err = strconv.Atoi(coupletId)
-	if err != nil {
-		s.loger.Errorf("Error converting coupletId to int: %v", err)
-		return result, err
+	s.loger.Debugf("CoupletId: %v", coupletId)
+
+	if coupletId == "" {
+		couplet = 0
+	} else {
+		s.loger.Debugf("CoupletId: %v", coupletId)
+		couplet, err = strconv.Atoi(coupletId)
+		if err != nil {
+			s.loger.Errorf("Error converting coupletId to int: %v", err)
+			return result, err
+		}
 	}
 
-	result, err = s.store.GetSongVerses(reqID)
+	s.loger.Debugf("Couplet int: %v", couplet)
+	s.loger.Debugf("GUID: %v", guid)
+
+	text, err = s.store.GetSongCouplet(guid, reqID)
 	if err != nil {
 		s.loger.Errorf("Error getting song verses: %v", err)
 		return result, err
 	}
 
-	couplets = strings.Split(result.Couplet, "\\n\\n")
-	if len(couplets) < couplet {
+	couplets = strings.Split(text, "\\n\\n")
+
+	s.loger.Debugf("len couplets: %v", len(couplets))
+	s.loger.Debugf("couplets: %v", couplets)
+
+	if couplet > len(couplets) {
 		s.loger.Errorf("Error getting song verses: coupletId is out of range")
 		return result, err
 	}
 
-	result.Couplet = couplets[couplet-1]
+	result = models.SongVerseResponse{
+		ID:        guid,
+		CoupletId: couplet,
+		Couplet:   couplets[couplet],
+	}
 
 	return result, nil
 }

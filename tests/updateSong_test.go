@@ -1,9 +1,7 @@
-package test
+package tests
 
 import (
-	"fmt"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,8 +18,7 @@ func TestUpdateSong(t *testing.T) {
 		Artist: "Linkin Park",
 	}
 
-	url := fmt.Sprintf("http://localhost:%s/api/song", os.Getenv("WEBSERVER_PORT"))
-	statusCode, song, err := CreateSong(t, testSong, url)
+	statusCode, song, err := CreateSong(t, testSong)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, statusCode)
 
@@ -36,15 +33,16 @@ func TestUpdateSong(t *testing.T) {
 	}
 
 	var detailSong models.Song
-	statusCode, detailSong, err = UpdateSong(t, testUpdateSong, url)
+	statusCode, detailSong, err = UpdateSong(t, testUpdateSong)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusCode)
 	assert.Equal(t, testUpdateSong, detailSong)
 
 	// Удаляем тестовые данные
-	statusCode, err = DeleteSong(t, song, url)
+	statusCode, err = DeleteSong(t, song)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, statusCode)
+
 }
 
 func TestUpdateSongWithEmptyID(t *testing.T) {
@@ -62,8 +60,7 @@ func TestUpdateSongWithEmptyID(t *testing.T) {
 		Link:    "https://www.youtube.com/watch?v=Xsp3_a-PMTw",
 	}
 
-	url := fmt.Sprintf("http://localhost:%s/api/song", os.Getenv("WEBSERVER_PORT"))
-	statusCode, _, err = UpdateSong(t, testUpdateSong, url)
+	statusCode, _, err = UpdateSong(t, testUpdateSong)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, statusCode)
 }

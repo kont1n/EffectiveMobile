@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/a-h/respond"
 	"github.com/go-chi/chi/v5"
@@ -30,7 +31,7 @@ type SongAPI interface {
 	deleteSong(writer http.ResponseWriter, request *http.Request)
 	getSongInfo(writer http.ResponseWriter, request *http.Request)
 	getSongsList(writer http.ResponseWriter, request *http.Request)
-	getSongVerses(writer http.ResponseWriter, request *http.Request)
+	getSongCouplet(writer http.ResponseWriter, request *http.Request)
 }
 
 func NewHandler(service *service.Service, loger *zap.SugaredLogger) *ApiHandler {
@@ -96,6 +97,9 @@ func (h *ApiHandler) readSong(writer http.ResponseWriter, request *http.Request)
 	}
 
 	result, err = h.service.ReadSong(guid, reqID)
+
+	h.loger.Debugln(result)
+
 	if err != nil {
 		h.JSONError(writer, fmt.Sprintf("Error reading song: %v", err.Error()), http.StatusInternalServerError, reqID)
 		return
@@ -134,12 +138,23 @@ func (h *ApiHandler) updateSong(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 
+	if song.Release != "" {
+		_, err = time.Parse("02.01.2006", song.Release)
+		if err != nil {
+			h.loger.Errorf("Error parsing release date: %v", err)
+			h.JSONError(writer, fmt.Sprintf("Error parsing release date: %v", err.Error()), http.StatusBadRequest, reqID)
+			return
+		}
+	}
+
 	result, err = h.service.UpdateSong(song, reqID)
 	if err != nil {
 		h.loger.Errorf("Error updating song: %v", err)
 		h.JSONError(writer, fmt.Sprintf("Error updating song: %v", err.Error()), http.StatusInternalServerError, reqID)
 		return
 	}
+
+	h.loger.Debugln(result)
 
 	respond.WithJSON(writer, result, http.StatusOK)
 }
@@ -229,24 +244,30 @@ func (h *ApiHandler) getSongsList(writer http.ResponseWriter, request *http.Requ
 	respond.WithJSON(writer, result, http.StatusOK)
 }
 
-// getSongVerses : Обработка запроса для получения куплета песни
-func (h *ApiHandler) getSongVerses(writer http.ResponseWriter, request *http.Request) {
+// getSongCouplet : Обработка запроса для получения куплета песни
+func (h *ApiHandler) getSongCouplet(writer http.ResponseWriter, request *http.Request) {
 	var result models.SongVerseResponse
 	var coupletId string
-
-	// add pagination and couplet
 
 	reqID := middleware.GetReqID(request.Context())
 	uri := request.RequestURI
 	method := request.Method
 	h.loger.Debugf("RequestID: %v uri: %v method: %v", reqID, uri, method)
 
-	coupletId = chi.URLParam(request, "сoupletId")
-	if coupletId == "" {
-		coupletId = defaultСouplet
+	guid := chi.URLParam(request, "id")
+	if guid == "" {
+		h.JSONError(writer, "ID is required", http.StatusBadRequest, reqID)
+		return
 	}
 
-	result, err = h.service.GetSongVerses(coupletId, reqID)
+	coupletStr := request.URL.Query().Get("id")
+	if coupletStr == "" {
+		coupletId = defaultСouplet
+	} else {
+		coupletId = coupletStr
+	}
+
+	result, err = h.service.GetSongCouplet(guid, coupletId, reqID)
 	if err != nil {
 		h.loger.Errorf("Error getting song verses: %v", err)
 		h.JSONError(writer, fmt.Sprintf("Error getting song verses: %v", err.Error()), http.StatusInternalServerError, reqID)
