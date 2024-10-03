@@ -17,6 +17,16 @@ var (
 type Storage struct {
 	db    *pgxpool.Pool
 	loger *zap.SugaredLogger
+	SongStorage
+}
+type SongStorage interface {
+	CreateSong(song models.SongRequest, reqID string) (string, error)
+	ReadSong(guid string, reqID string) (models.Song, error)
+	UpdateSong(song models.Song, reqID string) (models.Song, error)
+	DeleteSong(guid string, reqID string) (models.SongResponse, error)
+	GetSongInfo(song models.SongRequest, reqID string) (models.SongInfoResponse, error)
+	GetSongsList(reqID string) (models.SongsListResponse, error)
+	GetSongVerses(id string) (models.SongVerseResponse, error)
 }
 
 func NewStorage(db *pgxpool.Pool, loger *zap.SugaredLogger) *Storage {

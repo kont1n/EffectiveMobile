@@ -20,6 +20,17 @@ var err error
 type ApiHandler struct {
 	service *service.Service
 	loger   *zap.SugaredLogger
+	SongAPI
+}
+
+type SongAPI interface {
+	createSong(writer http.ResponseWriter, request *http.Request)
+	readSong(writer http.ResponseWriter, request *http.Request)
+	updateSong(writer http.ResponseWriter, request *http.Request)
+	deleteSong(writer http.ResponseWriter, request *http.Request)
+	getSongInfo(writer http.ResponseWriter, request *http.Request)
+	getSongsList(writer http.ResponseWriter, request *http.Request)
+	getSongVerses(writer http.ResponseWriter, request *http.Request)
 }
 
 func NewHandler(service *service.Service, loger *zap.SugaredLogger) *ApiHandler {
@@ -117,9 +128,9 @@ func (h *ApiHandler) updateSong(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 
-	if song.Name == "" || song.Artist == "" {
+	if song.ID == "" || song.Name == "" || song.Artist == "" {
 		h.loger.Errorf("Song name, artist not filled")
-		h.JSONError(writer, "Song name, artist are required", http.StatusBadRequest, reqID)
+		h.JSONError(writer, "Song id, name, artist are required", http.StatusBadRequest, reqID)
 		return
 	}
 
