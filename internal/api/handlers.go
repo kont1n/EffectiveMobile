@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/a-h/respond"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 
@@ -28,10 +29,10 @@ func NewHandler(service *service.Service, loger *zap.SugaredLogger) *ApiHandler 
 	}
 }
 
-// postSong : Обработка запроса для создания песни
-func (h *ApiHandler) postSong(writer http.ResponseWriter, request *http.Request) {
-	var song models.SongPostRequest
-	var result models.SongPostResponse
+// createSong : Обработка запроса для создания песни
+func (h *ApiHandler) createSong(writer http.ResponseWriter, request *http.Request) {
+	var song models.SongRequest
+	var result models.SongResponse
 	var buf bytes.Buffer
 
 	reqID := middleware.GetReqID(request.Context())
@@ -68,70 +69,174 @@ func (h *ApiHandler) postSong(writer http.ResponseWriter, request *http.Request)
 	respond.WithJSON(writer, result, http.StatusCreated)
 }
 
-// getSong : Обработка запроса для получения песни по ее ID
-func (h *ApiHandler) getSong(w http.ResponseWriter, r *http.Request) {
-	resp := models.SongDetail{
-		ID:      "80fbcef2-19d6-49fa-bf54-0ff57a7d0744",
-		Name:    "Supermassive Black Hole",
-		Artist:  "Muse",
-		Release: "16.07.2006",
-		Text:    "Ooh baby, don't you know I suffer?\nOoh baby, can you hear me moan?\nYou caught me under false pretenses\nHow long before you let me go?\n\nOoh\nYou set my soul alight\nOoh\nYou set my soul alight",
-		Link:    "https://www.youtube.com/watch?v=Xsp3_a-PMTw",
+// readSong : Обработка запроса для получения песни по ее ID
+func (h *ApiHandler) readSong(writer http.ResponseWriter, request *http.Request) {
+	var result models.Song
+
+	reqID := middleware.GetReqID(request.Context())
+	uri := request.RequestURI
+	method := request.Method
+	h.loger.Debugf("RequestID: %v uri: %v method: %v", reqID, uri, method)
+
+	guid := chi.URLParam(request, "id")
+	if guid == "" {
+		h.JSONError(writer, "ID is required", http.StatusBadRequest, reqID)
+		return
 	}
-	respond.WithJSON(w, resp, http.StatusOK)
+
+	result, err = h.service.ReadSong(guid, reqID)
+	if err != nil {
+		h.JSONError(writer, fmt.Sprintf("Error reading song: %v", err.Error()), http.StatusInternalServerError, reqID)
+		return
+	}
+
+	respond.WithJSON(writer, result, http.StatusOK)
 }
 
 // updateSong : Обработка запроса для обновления песни
-func (h *ApiHandler) updateSong(w http.ResponseWriter, r *http.Request) {
-	resp := models.SongDetail{
-		ID:      "80fbcef2-19d6-49fa-bf54-0ff57a7d0744",
-		Name:    "Supermassive Black Hole",
-		Artist:  "Muse",
-		Release: "16.07.2006",
-		Text:    "Ooh baby, don't you know I suffer?\nOoh baby, can you hear me moan?\nYou caught me under false pretenses\nHow long before you let me go?\n\nOoh\nYou set my soul alight\nOoh\nYou set my soul alight",
-		Link:    "https://www.youtube.com/watch?v=Xsp3_a-PMTw",
+func (h *ApiHandler) updateSong(writer http.ResponseWriter, request *http.Request) {
+	var song models.Song
+	var result models.Song
+	var buf bytes.Buffer
+
+	reqID := middleware.GetReqID(request.Context())
+	uri := request.RequestURI
+	method := request.Method
+	h.loger.Debugf("RequestID: %v uri: %v method: %v", reqID, uri, method)
+
+	_, err = buf.ReadFrom(request.Body)
+	if err != nil {
+		h.loger.Errorf("Error reading request body: %v", err)
+		h.JSONError(writer, fmt.Sprintf("Error reading request body: %v", err.Error()), http.StatusBadRequest, reqID)
+		return
 	}
-	respond.WithJSON(w, resp, http.StatusOK)
+
+	if err = json.Unmarshal(buf.Bytes(), &song); err != nil {
+		h.loger.Errorf("Error unmarshalling request body: %v", err)
+		h.JSONError(writer, fmt.Sprintf("Error unmarshalling request body: %v", err.Error()), http.StatusBadRequest, reqID)
+		return
+	}
+
+	if song.Name == "" || song.Artist == "" {
+		h.loger.Errorf("Song name, artist not filled")
+		h.JSONError(writer, "Song name, artist are required", http.StatusBadRequest, reqID)
+		return
+	}
+
+	result, err = h.service.UpdateSong(song, reqID)
+	if err != nil {
+		h.loger.Errorf("Error updating song: %v", err)
+		h.JSONError(writer, fmt.Sprintf("Error updating song: %v", err.Error()), http.StatusInternalServerError, reqID)
+		return
+	}
+
+	respond.WithJSON(writer, result, http.StatusOK)
 }
 
 // deleteSong : Обработка запроса для удаления песни по ее ID
-func (h *ApiHandler) deleteSong(w http.ResponseWriter, r *http.Request) {
-	resp := models.SongDetail{
-		ID:      "80fbcef2-19d6-49fa-bf54-0ff57a7d0744",
-		Name:    "Supermassive Black Hole",
-		Artist:  "Muse",
-		Release: "16.07.2006",
-		Text:    "Ooh baby, don't you know I suffer?\nOoh baby, can you hear me moan?\nYou caught me under false pretenses\nHow long before you let me go?\n\nOoh\nYou set my soul alight\nOoh\nYou set my soul alight",
-		Link:    "https://www.youtube.com/watch?v=Xsp3_a-PMTw",
+func (h *ApiHandler) deleteSong(writer http.ResponseWriter, request *http.Request) {
+	var result models.SongResponse
+
+	reqID := middleware.GetReqID(request.Context())
+	uri := request.RequestURI
+	method := request.Method
+	h.loger.Debugf("RequestID: %v uri: %v method: %v", reqID, uri, method)
+
+	guid := chi.URLParam(request, "id")
+	if guid == "" {
+		h.JSONError(writer, "ID is required", http.StatusBadRequest, reqID)
+		return
 	}
-	respond.WithJSON(w, resp, http.StatusOK)
+
+	result, err = h.service.DeleteSong(guid, reqID)
+	if err != nil {
+		h.JSONError(writer, fmt.Sprintf("Error deleting song: %v", err.Error()), http.StatusInternalServerError, reqID)
+		return
+	}
+
+	respond.WithJSON(writer, result, http.StatusOK)
+}
+
+// getSongInfo : Получение информации о песне
+func (h *ApiHandler) getSongInfo(writer http.ResponseWriter, request *http.Request) {
+	var song models.SongRequest
+	var result models.SongInfoResponse
+	var buf bytes.Buffer
+
+	reqID := middleware.GetReqID(request.Context())
+	uri := request.RequestURI
+	method := request.Method
+	h.loger.Debugf("RequestID: %v uri: %v method: %v", reqID, uri, method)
+
+	_, err = buf.ReadFrom(request.Body)
+	if err != nil {
+		h.loger.Errorf("Error reading request body: %v", err)
+		h.JSONError(writer, fmt.Sprintf("Error reading request body: %v", err.Error()), http.StatusBadRequest, reqID)
+		return
+	}
+
+	if err = json.Unmarshal(buf.Bytes(), &song); err != nil {
+		h.loger.Errorf("Error unmarshalling request body: %v", err)
+		h.JSONError(writer, fmt.Sprintf("Error unmarshalling request body: %v", err.Error()), http.StatusBadRequest, reqID)
+		return
+	}
+
+	if song.Name == "" || song.Artist == "" {
+		h.loger.Errorf("Song name, artist not filled")
+		h.JSONError(writer, "Song name, artist are required", http.StatusBadRequest, reqID)
+		return
+	}
+
+	result, err = h.service.GetSongInfo(song, reqID)
+	if err != nil {
+		h.loger.Errorf("Error getting song info: %v", err)
+		h.JSONError(writer, fmt.Sprintf("Error getting song info: %v", err.Error()), http.StatusInternalServerError, reqID)
+		return
+	}
+
+	respond.WithJSON(writer, result, http.StatusOK)
 }
 
 // getSongsList : Обработка запроса для получения списка песен
-func (h *ApiHandler) getSongsList(w http.ResponseWriter, r *http.Request) {
-	resp := []models.SongDetail{
-		{
-			ID:      "80fbcef2-19d6-49fa-bf54-0ff57a7d0744",
-			Name:    "Supermassive Black Hole",
-			Artist:  "Muse",
-			Release: "16.07.2006",
-			Text:    "Ooh baby, don't you know I suffer?\nOoh baby, can you hear me moan?\nYou caught me under false pretenses\nHow long before you let me go?\n\nOoh\nYou set my soul alight\nOoh\nYou set my soul alight",
-			Link:    "https://www.youtube.com/watch?v=Xsp3_a-PMTw",
-		},
+func (h *ApiHandler) getSongsList(writer http.ResponseWriter, request *http.Request) {
+	var result models.SongsListResponse
+
+	// add pagination and sorting
+
+	reqID := middleware.GetReqID(request.Context())
+	uri := request.RequestURI
+	method := request.Method
+	h.loger.Debugf("RequestID: %v uri: %v method: %v", reqID, uri, method)
+
+	result, err = h.service.GetSongsList(reqID)
+	if err != nil {
+		h.loger.Errorf("Error getting songs list: %v", err)
+		h.JSONError(writer, fmt.Sprintf("Error getting songs list: %v", err.Error()), http.StatusInternalServerError, reqID)
+		return
 	}
-	respond.WithJSON(w, resp, http.StatusOK)
+
+	respond.WithJSON(writer, result, http.StatusOK)
 }
 
 // getSongVerses : Обработка запроса для получения куплета песни
-func (h *ApiHandler) getSongVerses(w http.ResponseWriter, r *http.Request) {
-	resp := models.SongVerseResponse{
-		ID:        "80fbcef2-19d6-49fa-bf54-0ff57a7d0744",
-		Name:      "Supermassive Black Hole",
-		Artist:    "Muse",
-		CoupletId: 1,
-		Couplet:   "Ooh baby, don't you know I suffer?\nOoh baby, can you hear me moan?\nYou caught me under false pretenses\nHow long before you let me go?",
+func (h *ApiHandler) getSongVerses(writer http.ResponseWriter, request *http.Request) {
+	var result models.SongVerseResponse
+
+	// add pagination and couplet
+
+	reqID := middleware.GetReqID(request.Context())
+	uri := request.RequestURI
+	method := request.Method
+	h.loger.Debugf("RequestID: %v uri: %v method: %v", reqID, uri, method)
+
+	result, err = h.service.GetSongVerses(reqID)
+	if err != nil {
+		h.loger.Errorf("Error getting song verses: %v", err)
+		h.JSONError(writer, fmt.Sprintf("Error getting song verses: %v", err.Error()), http.StatusInternalServerError, reqID)
+		return
 	}
-	respond.WithJSON(w, resp, http.StatusOK)
+
+	respond.WithJSON(writer, result, http.StatusOK)
 }
 
 // JSONError : Обработка ошибок в JSON формате

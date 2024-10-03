@@ -9,9 +9,6 @@ import (
 
 var err error
 
-type Song interface {
-}
-
 type Service struct {
 	store *storage.Storage
 	loger *zap.SugaredLogger
@@ -25,16 +22,99 @@ func NewService(store *storage.Storage, loger *zap.SugaredLogger) *Service {
 }
 
 // CreateSong : Создание песни и вызов сервиса хранилища
-func (s Service) CreateSong(song models.SongPostRequest, reqID string) (string, error) {
+func (s Service) CreateSong(song models.SongRequest, reqID string) (string, error) {
 	s.loger.Debugf("RequestID: %v. Creating song in service", reqID)
-	result := models.SongPostResponse{}
+	result := models.SongResponse{}
 
 	result.ID, err = s.store.CreateSong(song, reqID)
-
 	if err != nil {
 		s.loger.Errorf("Error creating song: %v", err)
 		return "", err
 	}
 
 	return result.ID, nil
+}
+
+// ReadSong : Получение песни по ее ID и вызов сервиса хранилища
+func (s Service) ReadSong(guid string, reqID string) (models.Song, error) {
+	s.loger.Debugf("RequestID: %v. Creating song in service", reqID)
+	result := models.Song{}
+
+	result, err = s.store.ReadSong(guid, reqID)
+	if err != nil {
+		s.loger.Errorf("Error getting song: %v", err)
+		return result, err
+	}
+
+	return result, nil
+}
+
+// UpdateSong : Обновление песни и вызов сервиса хранилища
+func (s Service) UpdateSong(song models.Song, reqID string) (models.Song, error) {
+	s.loger.Debugf("RequestID: %v. Updating song in service", reqID)
+	result := models.Song{}
+
+	result, err = s.store.UpdateSong(song, reqID)
+	if err != nil {
+		s.loger.Errorf("Error updating song: %v", err)
+		return result, err
+	}
+
+	return result, nil
+}
+
+// DeleteSong : Удаление песни и вызов сервиса хранилища
+func (s Service) DeleteSong(guid string, reqID string) (models.SongResponse, error) {
+	s.loger.Debugf("RequestID: %v. Deleting song in service", reqID)
+	result := models.SongResponse{}
+
+	result, err = s.store.DeleteSong(guid, reqID)
+	if err != nil {
+		s.loger.Errorf("Error deleting song: %v", err)
+		return result, err
+	}
+
+	return result, nil
+}
+
+// GetSongInfo : Получение информации о песне и вызов сервиса хранилища
+func (s Service) GetSongInfo(song models.SongRequest, reqID string) (models.SongInfoResponse, error) {
+	s.loger.Debugf("RequestID: %v. Getting song info in service", reqID)
+	result := models.SongInfoResponse{}
+
+	result, err = s.store.GetSongInfo(song, reqID)
+	if err != nil {
+		s.loger.Errorf("Error getting song info: %v", err)
+		return result, err
+	}
+
+	return result, nil
+}
+
+// GetSongsList : Получение списка песен и вызов сервиса хранилища
+func (s Service) GetSongsList(reqID string) (models.SongsListResponse, error) {
+	s.loger.Debugf("RequestID: %v. Getting songs list in service", reqID)
+	result := models.SongsListResponse{}
+
+	result, err = s.store.GetSongsList(reqID)
+	if err != nil {
+		s.loger.Errorf("Error getting songs list: %v", err)
+		return result, err
+	}
+
+	return result, nil
+}
+
+// GetSongVerses : Получение куплета песни и вызов сервиса хранилища
+func (s Service) GetSongVerses(reqID string) (models.SongVerseResponse, error) {
+	s.loger.Debugf("RequestID: %v. Getting song verses in service", reqID)
+	result := models.SongVerseResponse{}
+
+	result, err = s.store.GetSongVerses(reqID)
+	if err != nil {
+		s.loger.Errorf("Error getting song verses: %v", err)
+		return result, err
+	}
+
+	return result, nil
 }

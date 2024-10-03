@@ -1,6 +1,6 @@
 package models
 
-type SongDetail struct {
+type Song struct {
 	ID      string `json:"id"`
 	Name    string `json:"song"`
 	Artist  string `json:"group"`
@@ -9,28 +9,34 @@ type SongDetail struct {
 	Link    string `json:"link,omitempty"`
 }
 
-type SongPostRequest struct {
+type SongRequest struct {
 	Name   string `json:"song"`
 	Artist string `json:"group"`
 }
 
-type SongPostResponse struct {
+type SongResponse struct {
 	ID string `json:"id"`
 }
 
-type SongsGetResponse struct {
-	Songs []SongDetail `json:"songs"`
+type SongInfoResponse struct {
+	Release string `json:"releaseDate"`
+	Text    string `json:"text"`
+	Link    string `json:"link"`
+}
+
+type SongsListResponse struct {
+	Songs []Song `json:"songs"`
 }
 
 type SongVerseResponse struct {
 	ID        string `json:"id"`
 	Name      string `json:"song"`
 	Artist    string `json:"group"`
-	CoupletId int    `json:"couplet_id"`
+	CoupletId int    `json:"coupletId"`
 	Couplet   string `json:"couplet"`
 }
 
 type ErrorResponse struct {
-	RequestID string `json:"request_id"`
+	RequestID string `json:"requestId"`
 	Error     string `json:"error"`
 }
