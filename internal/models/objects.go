@@ -12,12 +12,12 @@ type Song struct {
 }
 
 type SongDB struct {
-	ID      string
-	Name    string
-	Artist  string
-	Release sql.NullTime
-	Text    sql.NullString
-	Link    sql.NullString
+	ID      string         `db:"id"`
+	Name    string         `db:"song_name"`
+	Artist  string         `db:"artist_name"`
+	Release sql.NullTime   `db:"release_date"`
+	Text    sql.NullString `db:"song_text"`
+	Link    sql.NullString `db:"link"`
 }
 
 type SongRequest struct {
@@ -58,4 +58,15 @@ type SongVerseResponse struct {
 type ErrorResponse struct {
 	RequestID string `json:"requestId"`
 	Error     string `json:"error"`
+}
+
+type SortOptions struct {
+	Field string
+	Order string
+}
+
+type PaginationOptions struct {
+	Limit     string
+	Offset    string
+	PageToken string
 }

@@ -43,6 +43,8 @@ func NewHandler(service *service.Service, loger *zap.SugaredLogger) *ApiHandler 
 
 // createSong : Обработка запроса для создания песни
 func (h *ApiHandler) createSong(writer http.ResponseWriter, request *http.Request) {
+	h.loger.Debugln("CreateSong handler")
+
 	var song models.SongRequest
 	var result models.SongResponse
 	var buf bytes.Buffer
@@ -83,6 +85,8 @@ func (h *ApiHandler) createSong(writer http.ResponseWriter, request *http.Reques
 
 // readSong : Обработка запроса для получения песни по ее ID
 func (h *ApiHandler) readSong(writer http.ResponseWriter, request *http.Request) {
+	h.loger.Debugln("ReadSong handler")
+
 	var result models.Song
 
 	reqID := middleware.GetReqID(request.Context())
@@ -110,6 +114,8 @@ func (h *ApiHandler) readSong(writer http.ResponseWriter, request *http.Request)
 
 // updateSong : Обработка запроса для обновления песни
 func (h *ApiHandler) updateSong(writer http.ResponseWriter, request *http.Request) {
+	h.loger.Debugln("UpdateSong handler")
+
 	var song models.Song
 	var result models.Song
 	var buf bytes.Buffer
@@ -161,6 +167,8 @@ func (h *ApiHandler) updateSong(writer http.ResponseWriter, request *http.Reques
 
 // deleteSong : Обработка запроса для удаления песни по ее ID
 func (h *ApiHandler) deleteSong(writer http.ResponseWriter, request *http.Request) {
+	h.loger.Debugln("DeleteSong handler")
+
 	var result models.SongResponse
 
 	reqID := middleware.GetReqID(request.Context())
@@ -185,6 +193,8 @@ func (h *ApiHandler) deleteSong(writer http.ResponseWriter, request *http.Reques
 
 // getSongInfo : Получение информации о песне
 func (h *ApiHandler) getSongInfo(writer http.ResponseWriter, request *http.Request) {
+	h.loger.Debugln("GetSongInfo handler")
+
 	var song models.SongRequest
 	var result models.SongInfoResponse
 	var buf bytes.Buffer
@@ -225,16 +235,31 @@ func (h *ApiHandler) getSongInfo(writer http.ResponseWriter, request *http.Reque
 
 // getSongsList : Обработка запроса для получения списка песен
 func (h *ApiHandler) getSongsList(writer http.ResponseWriter, request *http.Request) {
-	var result models.SongsListResponse
+	h.loger.Debugln("GetSongsList handler")
 
-	// add pagination and sorting
+	var result models.SongsListResponse
+	var sortOptions models.SortOptions
+	var paginationOptions models.PaginationOptions
+	var filterOptions map[string]string
 
 	reqID := middleware.GetReqID(request.Context())
 	uri := request.RequestURI
 	method := request.Method
 	h.loger.Debugf("RequestID: %v uri: %v method: %v", reqID, uri, method)
 
-	result, err = h.service.GetSongsList(reqID)
+	if options, ok := request.Context().Value("sort_options").(models.SortOptions); ok {
+		sortOptions = options
+	}
+
+	if options, ok := request.Context().Value("pagination_options").(models.PaginationOptions); ok {
+		paginationOptions = options
+	}
+
+	if options, ok := request.Context().Value("filter_options").(map[string]string); ok {
+		filterOptions = options
+	}
+
+	result, err = h.service.GetSongsList(reqID, sortOptions, paginationOptions, filterOptions)
 	if err != nil {
 		h.loger.Errorf("Error getting songs list: %v", err)
 		h.JSONError(writer, fmt.Sprintf("Error getting songs list: %v", err.Error()), http.StatusInternalServerError, reqID)
@@ -246,8 +271,9 @@ func (h *ApiHandler) getSongsList(writer http.ResponseWriter, request *http.Requ
 
 // getSongCouplet : Обработка запроса для получения куплета песни
 func (h *ApiHandler) getSongCouplet(writer http.ResponseWriter, request *http.Request) {
+	h.loger.Debugln("GetSongCouplet handler")
+
 	var result models.SongVerseResponse
-	var coupletId string
 
 	reqID := middleware.GetReqID(request.Context())
 	uri := request.RequestURI
@@ -262,12 +288,10 @@ func (h *ApiHandler) getSongCouplet(writer http.ResponseWriter, request *http.Re
 
 	coupletStr := request.URL.Query().Get("id")
 	if coupletStr == "" {
-		coupletId = defaultСouplet
-	} else {
-		coupletId = coupletStr
+		coupletStr = defaultСouplet
 	}
 
-	result, err = h.service.GetSongCouplet(guid, coupletId, reqID)
+	result, err = h.service.GetSongCouplet(guid, coupletStr, reqID)
 	if err != nil {
 		h.loger.Errorf("Error getting song verses: %v", err)
 		h.JSONError(writer, fmt.Sprintf("Error getting song verses: %v", err.Error()), http.StatusInternalServerError, reqID)
@@ -279,6 +303,8 @@ func (h *ApiHandler) getSongCouplet(writer http.ResponseWriter, request *http.Re
 
 // JSONError : Обработка ошибок в JSON формате
 func (h *ApiHandler) JSONError(w http.ResponseWriter, error string, code int, reqID string) {
+	h.loger.Debugln("JSON Error util")
+
 	var resp []byte
 	w.WriteHeader(code)
 	w.Header().Set("Content-Type", "application/json")

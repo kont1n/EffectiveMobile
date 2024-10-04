@@ -239,3 +239,34 @@ func GetCouplet(t *testing.T, song models.SongResponse, coupletId string) (statu
 
 	return getResponse.StatusCode, result, err
 }
+
+func GetSongsList(t *testing.T) (statusCode int, songsList models.SongsListResponse, err error) {
+	t.Log("Calling the API to get a songs list")
+
+	var response *http.Response
+
+	getUrl := baseUrl + "s"
+	t.Log("Sending request to ", getUrl)
+
+	response, err = http.Get(getUrl)
+	if err != nil {
+		t.Logf("Error getting song: %v", err)
+		return -1, songsList, err
+	}
+	defer response.Body.Close()
+
+	responseData, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Logf("Error reading response body: %v", err)
+		return -1, songsList, err
+	}
+
+	t.Log("Response: ", string(responseData))
+
+	if err = json.Unmarshal(responseData, &songsList); err != nil {
+		t.Logf("Error unmarshalling response body: %v", err)
+		return -1, songsList, err
+	}
+
+	return response.StatusCode, songsList, err
+}

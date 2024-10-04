@@ -3,8 +3,13 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -13,7 +18,8 @@ import (
 )
 
 var (
-	err error
+	err  error
+	psql = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 )
 
 type Storage struct {
@@ -239,24 +245,129 @@ func (s Storage) GetSongInfo(song models.SongRequest, reqID string) (result mode
 }
 
 // GetSongsList : Получение списка песен в базе данных
-func (s Storage) GetSongsList(reqID string) (models.SongsListResponse, error) {
+func (s Storage) GetSongsList(reqID string, sortOptions models.SortOptions, paginationOptions models.PaginationOptions, filterOptions map[string]string) (result models.SongsListResponse, err error) {
 	var rows pgx.Rows
 
 	s.loger.Debugf("RequestID: %v. Reading songs list from the database", reqID)
-	result := models.SongsListResponse{}
+	resultDB := models.SongsListResponseDB{}
 
-	limit := 10
+	limit, _ := strconv.Atoi(paginationOptions.Limit)
 
-	rows, err = s.db.Query(context.Background(), "SELECT id, song_name, artist_name, release_date, song_text, link FROM public.songs ORDER BY id DESC LIMIT $1", limit)
+	mapDB := map[string]string{
+		"id":      "id",
+		"song":    "song_name",
+		"group":   "artist_name",
+		"release": "release_date",
+		"text":    "song_text",
+		"link":    "link",
+	}
+
+	sb := psql.Select("id", "song_name", "artist_name", "release_date", "song_text", "link").
+		From("public.songs")
+
+	if len(filterOptions) != 0 {
+		for key, value := range filterOptions {
+			param := strings.Split(value, ":")
+			switch len(param) {
+			case 1:
+				sb = sb.Where(sq.Eq{mapDB[key]: value})
+			case 2:
+				switch param[0] {
+				case "eq":
+					sb = sb.Where(sq.Eq{mapDB[key]: param[1]})
+				case "nq":
+					sb = sb.Where(sq.NotEq{mapDB[key]: param[1]})
+				case "gt":
+					sb = sb.Where(sq.Gt{mapDB[key]: param[1]})
+				case "gte":
+					sb = sb.Where(sq.GtOrEq{mapDB[key]: param[1]})
+				case "lt":
+					sb = sb.Where(sq.Lt{mapDB[key]: param[1]})
+				case "lte":
+					sb = sb.Where(sq.LtOrEq{mapDB[key]: param[1]})
+				case "like":
+					sb = sb.Where(sq.Like{mapDB[key]: param[1]})
+				case "ilike":
+					sb = sb.Where(sq.ILike{mapDB[key]: param[1]})
+				}
+			default:
+				s.loger.Errorf("Wrong filterOptions format")
+				return result, err
+			}
+		}
+	}
+	sb = sb.OrderBy(fmt.Sprintf("%v %v", mapDB[sortOptions.Field], sortOptions.Order))
+	sb = sb.Limit(uint64(limit))
+	if paginationOptions.Offset != "" {
+		offset, err := strconv.Atoi(paginationOptions.Offset)
+		if err != nil {
+			s.loger.Errorf("Error converting offset to int: %v", err)
+			return result, err
+		}
+		sb = sb.Offset(uint64(offset))
+	} else {
+		pToken, err := strconv.Atoi(paginationOptions.PageToken)
+		if err != nil {
+			s.loger.Errorf("Error converting page_token to int: %v", err)
+			return result, err
+		}
+		// TODO
+		s.loger.Debugf("Page token: %v", pToken)
+	}
+
+	query, args, err := sb.ToSql()
+	if err != nil {
+		s.loger.Errorf("Error building query: %v", err)
+		return result, err
+	}
+	s.loger.Debugf("Query: %v", query)
+	s.loger.Debugf("Args: %v", args)
+	s.loger.Debugf("len args: %v", len(args))
+
+	if len(args) == 0 {
+		rows, err = s.db.Query(context.Background(), query)
+	} else {
+		rows, err = s.db.Query(context.Background(), query, args...)
+	}
 	if err != nil {
 		s.loger.Errorf("Error getting songs list from the database: %v", err.Error())
 		return result, err
 	}
 
-	result.Songs, err = pgx.CollectRows(rows, pgx.RowToStructByName[models.Song])
+	resultDB.Songs, err = pgx.CollectRows(rows, pgx.RowToStructByName[models.SongDB])
 	if err != nil {
 		s.loger.Errorf("Error collecting rows: %v", err.Error())
 		return result, err
+	}
+
+	for _, songDB := range resultDB.Songs {
+		var rlsDate, text, link string
+
+		if songDB.Release.Valid {
+			rlsDate = songDB.Release.Time.Format("02.01.2006")
+		} else {
+			rlsDate = ""
+		}
+		if songDB.Text.Valid {
+			text = songDB.Text.String
+		} else {
+			text = ""
+		}
+		if songDB.Link.Valid {
+			link = songDB.Link.String
+		} else {
+			link = ""
+		}
+
+		row := models.Song{
+			ID:      songDB.ID,
+			Name:    songDB.Name,
+			Artist:  songDB.Artist,
+			Release: rlsDate,
+			Text:    text,
+			Link:    link,
+		}
+		result.Songs = append(result.Songs, row)
 	}
 
 	s.loger.Debugf("RequestID: %v. Songs list read from the database", reqID)

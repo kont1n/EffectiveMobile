@@ -1,9 +1,10 @@
 package service
 
 import (
-	"go.uber.org/zap"
 	"strconv"
 	"strings"
+
+	"go.uber.org/zap"
 
 	"EffectiveMobile/internal/models"
 	"EffectiveMobile/internal/storage"
@@ -105,11 +106,21 @@ func (s Service) GetSongInfo(song models.SongRequest, reqID string) (models.Song
 }
 
 // GetSongsList : Получение списка песен и вызов сервиса хранилища
-func (s Service) GetSongsList(reqID string) (models.SongsListResponse, error) {
+func (s Service) GetSongsList(reqID string, sortOptions models.SortOptions, paginationOptions models.PaginationOptions, filterOptions map[string]string) (models.SongsListResponse, error) {
 	s.loger.Debugf("RequestID: %v. Getting songs list in service", reqID)
 	result := models.SongsListResponse{}
 
-	result, err = s.store.GetSongsList(reqID)
+	s.loger.Debugf("SortOptions: %v", sortOptions)
+	s.loger.Debugf("PaginationOptions: %v", paginationOptions)
+	s.loger.Debugf("FilterOptions: %v", filterOptions)
+
+	_, err = strconv.Atoi(paginationOptions.Limit)
+	if err != nil {
+		s.loger.Errorf("Error converting limit to int: %v", err)
+		return result, err
+	}
+
+	result, err = s.store.GetSongsList(reqID, sortOptions, paginationOptions, filterOptions)
 	if err != nil {
 		s.loger.Errorf("Error getting songs list: %v", err)
 		return result, err

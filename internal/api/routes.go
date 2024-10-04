@@ -27,11 +27,16 @@ func (h *ApiHandler) InitRoutes() *chi.Mux {
 	router.Post("/api/song", h.createSong)
 	router.Put("/api/song", h.updateSong)
 	router.Delete("/api/song/{id}", h.deleteSong)
-	router.Get("/api/song/info", h.getSongInfo) // Так делать не надо
+	router.Get("/api/song/info", h.getSongInfo)
 	router.Get("/api/song/{id}", h.readSong)
 	router.Get("/api/song/{id}/couplet", h.getSongCouplet)
 
-	router.Get("/api/songs", h.getSongsList)
+	router.Route("/api/songs", func(r chi.Router) {
+		r.Use(h.Sorting)
+		r.Use(h.Filtering)
+		r.Use(h.Pagination)
+		r.Get("/", h.getSongsList)
+	})
 
 	// Create the API definition.
 	api := rest.NewAPI("Music Store API")
@@ -80,7 +85,7 @@ func (h *ApiHandler) InitRoutes() *chi.Mux {
 		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongVerseResponse]()).
 		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
 
-	api.Get("/api/songs").
+	api.Get("/api/songs/").
 		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongsListResponse]()).
 		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
 		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
