@@ -206,7 +206,7 @@ func GetCouplet(t *testing.T, song models.SongResponse, coupletId string) (statu
 	var getRequest *http.Request
 	var getResponse *http.Response
 
-	getUrl := baseUrl + "/" + song.ID + "/couplet" + "?id=" + coupletId
+	getUrl := baseUrl + "/" + song.ID + "/couplet" + "?couplet_id=" + coupletId
 
 	t.Log("Sending request to ", getUrl)
 	client := &http.Client{}

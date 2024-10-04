@@ -15,3 +15,4 @@ https://github.com/kont1n/EffectiveMobile/blob/main/ТЗ_EffectiveMobile_Go.pdf
 
 ## Swagger документация
 `http://localhost:8080/swagger-ui`
+

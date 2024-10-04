@@ -286,7 +286,7 @@ func (h *ApiHandler) getSongCouplet(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
-	coupletStr := request.URL.Query().Get("id")
+	coupletStr := request.URL.Query().Get("couplet_id")
 	if coupletStr == "" {
 		coupletStr = defaultСouplet
 	}

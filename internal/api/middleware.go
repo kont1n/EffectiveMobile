@@ -1,7 +1,6 @@
 package api
 
 import (
-	"EffectiveMobile/internal/models"
 	"context"
 	"net/http"
 	"strings"
@@ -9,6 +8,8 @@ import (
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/urfave/negroni"
+
+	"EffectiveMobile/internal/models"
 )
 
 const (

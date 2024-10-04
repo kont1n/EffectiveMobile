@@ -38,16 +38,14 @@ func TestGetSongList(t *testing.T) {
 
 	t.Log("songsList: ", songsList)
 
-	/*
-		// удаляем тестовые данные
-		for _, song := range toDelete {
-			statusCode, err = DeleteSong(t, song)
-			if err != nil {
-				t.Log("Error deleting song: ", err)
-			}
-			require.NoError(t, err)
-			assert.Equal(t, http.StatusOK, statusCode)
+	// удаляем тестовые данные
+	for _, song := range toDelete {
+		statusCode, err = DeleteSong(t, song)
+		if err != nil {
+			t.Log("Error deleting song: ", err)
 		}
-	*/
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, statusCode)
+	}
 
 }

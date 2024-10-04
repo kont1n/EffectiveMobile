@@ -82,10 +82,21 @@ func (h *ApiHandler) InitRoutes() *chi.Mux {
 		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
 
 	api.Get("/api/song/{id}/couplet").
+		HasQueryParameter("couplet_id", rest.QueryParam{Type: "string", Required: false}).
 		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongVerseResponse]()).
 		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
 
 	api.Get("/api/songs/").
+		HasQueryParameter("sort_by", rest.QueryParam{Type: "string", Required: false}).
+		HasQueryParameter("sort_order", rest.QueryParam{Type: "string", Required: false, Description: "asc or desc"}).
+		HasQueryParameter("song", rest.QueryParam{Type: "string", Required: false, Description: "operator:value; supported operators: eq, nq, gt, gte, lt, lte, like, ilike"}).
+		HasQueryParameter("group", rest.QueryParam{Type: "string", Required: false, Description: "operator:value; supported operators: eq, nq, gt, gte, lt, lte, like, ilike"}).
+		HasQueryParameter("release", rest.QueryParam{Type: "string", Required: false, Description: "operator:value; supported operators: eq, nq, gt, gte, lt, lte, like, ilike"}).
+		HasQueryParameter("text", rest.QueryParam{Type: "string", Required: false, Description: "operator:value; supported operators: eq, nq, gt, gte, lt, lte, like, ilike"}).
+		HasQueryParameter("link", rest.QueryParam{Type: "string", Required: false, Description: "operator:value; supported operators: eq, nq, gt, gte, lt, lte, like, ilike"}).
+		HasQueryParameter("limit", rest.QueryParam{Type: "string", Required: false}).
+		HasQueryParameter("offset", rest.QueryParam{Type: "string", Required: false}).
+		HasQueryParameter("page_token", rest.QueryParam{Type: "string", Required: false}).
 		HasResponseModel(http.StatusOK, rest.ModelOf[models.SongsListResponse]()).
 		HasResponseModel(http.StatusBadRequest, rest.ModelOf[models.ErrorResponse]()).
 		HasResponseModel(http.StatusInternalServerError, rest.ModelOf[models.ErrorResponse]())
